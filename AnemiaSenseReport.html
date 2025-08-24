@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnemiaSense Interactive Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals with Blue Accent -->
+    <!-- Application Structure Plan: A single-page dashboard structure was chosen to present the key findings from the AnemiaSense analysis in a non-linear, explorable format. The user flow is guided by a top navigation bar leading to thematic sections: 1) An Overview to set the context, 2) Data Insights to interactively explore the dataset's characteristics (imbalance, distributions, correlations), and 3) Model Comparison to visualize the performance of different algorithms. This structure prioritizes user discovery and understanding over a rigid, linear report, making the complex data science process more accessible and engaging. -->
+    <!-- Visualization & Content Choices: 
+        - Class Imbalance (Bar Chart, Chart.js): Goal: Inform. Interaction: Buttons to toggle views. Justification: Clearly demonstrates the critical data preprocessing step of downsampling.
+        - Feature Distributions (Histogram, Chart.js): Goal: Compare. Interaction: Dropdown to select features. Justification: Allows users to interactively discover the differing data patterns between anemic and non-anemic groups.
+        - Correlation Matrix (Styled HTML Grid): Goal: Organize/Relate. Interaction: Hover tooltips. Justification: An accessible, non-SVG/image method to represent the heatmap, showing relationships between variables effectively.
+        - Model Performance (Bar Chart, Chart.js): Goal: Compare. Interaction: Hover tooltips. Justification: Standard and intuitive method for comparing the final accuracy scores of the trained models.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .nav-link {
+            transition: color 0.3s;
+        }
+        .nav-link:hover {
+            color: #3b82f6;
+        }
+        .stat-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="text-slate-700">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-10 shadow-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-slate-800">
+                <span class="text-blue-600">Anemia</span>Sense Report
+            </h1>
+            <div class="hidden md:flex space-x-8">
+                <a href="#overview" class="nav-link font-medium">Overview</a>
+                <a href="#insights" class="nav-link font-medium">Data Insights</a>
+                <a href="#models" class="nav-link font-medium">Model Comparison</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto p-6 md:p-8">
+        
+        <section id="overview" class="mb-16 text-center">
+            <h2 class="text-4xl font-bold text-slate-800 mb-4">Interactive Analysis of Anemia Prediction</h2>
+            <p class="max-w-3xl mx-auto text-lg text-slate-600">
+                This report translates the findings from the AnemiaSense machine learning project into an interactive experience. We explore the dataset used to predict anemia, visualize the impact of data balancing, and compare the performance of various predictive models. The goal is to make the data science process transparent and the results easily understandable.
+            </p>
+        </section>
+
+        <section id="insights" class="space-y-12">
+            <h2 class="text-3xl font-bold text-slate-800 text-center mb-8">Data Insights</h2>
+            
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-2xl font-semibold text-slate-800 mb-2 text-center">Tackling Class Imbalance</h3>
+                <p class="text-center text-slate-600 mb-6 max-w-2xl mx-auto">A key challenge in the dataset was the imbalance between anemic and non-anemic cases. To build a fair and accurate model, the majority class (non-anemic) was downsampled. Use the buttons below to see the data distribution before and after this crucial step.</p>
+                <div class="flex justify-center space-x-4 mb-6">
+                    <button id="btnOriginalData" class="bg-blue-600 text-white px-4 py-2 rounded-md font-medium">Original Data</button>
+                    <button id="btnBalancedData" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-md font-medium">Balanced Data</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="balanceChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-2xl font-semibold text-slate-800 mb-2 text-center">Feature Distributions</h3>
+                <p class="text-center text-slate-600 mb-6 max-w-2xl mx-auto">How do blood metric values differ between anemic and non-anemic individuals? Select a feature from the dropdown to visualize its distribution for both groups. This helps identify which metrics are strong indicators for prediction.</p>
+                <div class="flex justify-center mb-6">
+                    <select id="featureSelector" class="border border-slate-300 rounded-md p-2">
+                        <option value="Hemoglobin">Hemoglobin</option>
+                        <option value="MCH">MCH</option>
+                        <option value="MCHC">MCHC</option>
+                        <option value="MCV">MCV</option>
+                    </select>
+                </div>
+                <div class="chart-container">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-2xl font-semibold text-slate-800 mb-2 text-center">Feature Correlation Matrix</h3>
+                <p class="text-center text-slate-600 mb-6 max-w-2xl mx-auto">This matrix shows the correlation between different features. A darker color indicates a stronger positive correlation. Hover over a cell to see the exact value. This helps understand the relationships between the variables used for prediction.</p>
+                <div id="correlationMatrix" class="max-w-xl mx-auto grid grid-cols-6 gap-1 text-xs md:text-sm text-white font-medium">
+                </div>
+            </div>
+        </section>
+
+        <section id="models" class="mt-16">
+            <h2 class="text-3xl font-bold text-slate-800 text-center mb-8">Model Performance Comparison</h2>
+            <p class="text-center text-slate-600 mb-6 max-w-2xl mx-auto">Multiple machine learning models were trained on the balanced dataset. The chart below compares their accuracy scores on the test set, highlighting which algorithms performed best for this prediction task.</p>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                 <div class="chart-container">
+                    <canvas id="accuracyChart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-slate-800 text-slate-300 mt-16 py-6 text-center">
+        <p>&copy; 2025 AnemiaSense Interactive Report. Generated from analysis of the Anemia dataset.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const data = {
+                balance: {
+                    original: { labels: ['Non-Anemic (0)', 'Anemic (1)'], counts: [801, 620] },
+                    balanced: { labels: ['Non-Anemic (0)', 'Anemic (1)'], counts: [620, 620] }
+                },
+                distributions: {
+                    Hemoglobin: { nonAnemic: [16.6, 15.3, 14.8, 14.6, 15.9, 15.9, 13.7, 13.3, 14.9, 14.7, 15.5, 12.1, 14.3, 15.3, 15.9, 16.6, 15.0, 13.5, 14.9, 16.0], anemic: [9.0, 11.6, 12.7, 12.7, 13.0, 10.5, 10.7, 11.5, 10.9, 11.3, 13.2, 10.6, 12.1, 13.1, 11.8, 11.6, 11.5, 11.3, 10.6, 10.9] },
+                    MCH: { nonAnemic: [18.8, 18.3, 20.4, 16.9, 28.7, 21.6, 23.5, 26.3, 28.2, 23.4, 21.9, 28.3, 27.6, 25.3, 28.7, 29.1, 21.7, 27.7, 20.8, 23.6], anemic: [21.5, 22.3, 19.5, 28.5, 18.3, 19.4, 21.5, 19.4, 20.1, 20.6, 20.1, 25.4, 28.3, 17.7, 21.2, 22.3, 21.5, 20.6, 25.4, 20.1] },
+                    MCHC: { nonAnemic: [28.1, 30.4, 28.5, 31.9, 31.0, 32.4, 29.0, 30.0, 31.2, 29.0, 31.4, 29.2, 32.3, 32.2, 31.0, 29.9, 30.6, 31.0, 32.3, 29.4], anemic: [29.6, 30.9, 28.9, 28.2, 29.6, 29.1, 29.6, 29.1, 28.8, 29.2, 28.8, 28.2, 30.4, 28.1, 28.4, 30.9, 29.6, 29.2, 28.2, 28.8] },
+                    MCV: { nonAnemic: [70.9, 93.4, 91.1, 78.1, 81.6, 83.7, 70.6, 100.0, 90.8, 99.6, 100.5, 99.7, 74.3, 96.6, 81.6, 76.4, 90.0, 77.3, 88.7, 95.6], anemic: [71.2, 74.5, 82.9, 92.3, 87.8, 77.3, 71.2, 77.3, 91.2, 98.5, 91.2, 82.9, 86.9, 80.7, 98.1, 74.5, 71.2, 98.5, 82.9, 91.2] }
+                },
+                correlations: {
+                    labels: ['Gender', 'Hemoglobin', 'MCH', 'MCHC', 'MCV', 'Result'],
+                    values: [
+                        [1.00, 0.22, 0.43, -0.23, 0.22, -0.30],
+                        [0.22, 1.00, 0.63, 0.49, 0.08, -0.79],
+                        [0.43, 0.63, 1.00, 0.04, -0.19, -0.57],
+                        [-0.23, 0.49, 0.04, 1.00, -0.51, -0.29],
+                        [0.22, 0.08, -0.19, -0.51, 1.00, 0.07],
+                        [-0.30, -0.79, -0.57, -0.29, 0.07, 1.00]
+                    ]
+                },
+                accuracies: {
+                    models: ['Logistic Regression', 'Decision Tree', 'Random Forest', 'Gaussian NB', 'SVM', 'Gradient Boosting'],
+                    scores: [0.9919, 1.0, 1.0, 0.9798, 0.9395, 1.0]
+                }
+            };
+
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#475569' } } },
+                scales: {
+                    x: { ticks: { color: '#475569' }, grid: { display: false } },
+                    y: { ticks: { color: '#475569' }, grid: { color: '#e2e8f0' } }
+                }
+            };
+            
+            const balanceCtx = document.getElementById('balanceChart').getContext('2d');
+            let balanceChart = new Chart(balanceCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.balance.original.labels,
+                    datasets: [{
+                        label: 'Patient Count',
+                        data: data.balance.original.counts,
+                        backgroundColor: ['#60a5fa', '#f87171'],
+                        borderColor: ['#3b82f6', '#ef4444'],
+                        borderWidth: 1
+                    }]
+                },
+                options: { ...chartOptions, indexAxis: 'y' }
+            });
+            
+            const distributionCtx = document.getElementById('distributionChart').getContext('2d');
+            let distributionChart = new Chart(distributionCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Non-Anemic', data: [], backgroundColor: '#60a5fa' },
+                        { label: 'Anemic', data: [], backgroundColor: '#f87171' }
+                    ]
+                },
+                options: { ...chartOptions, plugins: { legend: { display: true, labels: { color: '#475569' } } } }
+            });
+
+            const accuracyCtx = document.getElementById('accuracyChart').getContext('2d');
+            new Chart(accuracyCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.accuracies.models,
+                    datasets: [{
+                        label: 'Model Accuracy',
+                        data: data.accuracies.scores,
+                        backgroundColor: ['#60a5fa', '#34d399', '#34d399', '#a78bfa', '#fb923c', '#34d399'],
+                    }]
+                },
+                options: { ...chartOptions, indexAxis: 'y', scales: { ...chartOptions.scales, x: { ...chartOptions.scales.x, suggestedMax: 1.0 } } }
+            });
+            
+            function updateBalanceChart(type) {
+                balanceChart.data.labels = data.balance[type].labels;
+                balanceChart.data.datasets[0].data = data.balance[type].counts;
+                balanceChart.update();
+            }
+
+            function updateDistributionChart(feature) {
+                const nonAnemicData = data.distributions[feature].nonAnemic;
+                const anemicData = data.distributions[feature].anemic;
+                
+                const allData = [...nonAnemicData, ...anemicData];
+                const min = Math.min(...allData);
+                const max = Math.max(...allData);
+                const binCount = 10;
+                const binSize = (max - min) / binCount;
+                
+                const bins = Array.from({ length: binCount }, (_, i) => min + i * binSize);
+                const labels = bins.map((b, i) => `${b.toFixed(1)}-${(b + binSize).toFixed(1)}`);
+                
+                const nonAnemicHist = Array(binCount).fill(0);
+                const anemicHist = Array(binCount).fill(0);
+                
+                nonAnemicData.forEach(val => {
+                    const binIndex = Math.min(Math.floor((val - min) / binSize), binCount - 1);
+                    nonAnemicHist[binIndex]++;
+                });
+                anemicData.forEach(val => {
+                    const binIndex = Math.min(Math.floor((val - min) / binSize), binCount - 1);
+                    anemicHist[binIndex]++;
+                });
+
+                distributionChart.data.labels = labels;
+                distributionChart.data.datasets[0].data = nonAnemicHist;
+                distributionChart.data.datasets[1].data = anemicHist;
+                distributionChart.options.scales.x.title = { display: true, text: feature, color: '#475569' };
+                distributionChart.options.scales.y.title = { display: true, text: 'Frequency', color: '#475569' };
+                distributionChart.update();
+            }
+
+            const btnOriginal = document.getElementById('btnOriginalData');
+            const btnBalanced = document.getElementById('btnBalancedData');
+            btnOriginal.addEventListener('click', () => {
+                updateBalanceChart('original');
+                btnOriginal.classList.replace('bg-slate-200', 'bg-blue-600');
+                btnOriginal.classList.replace('text-slate-700', 'text-white');
+                btnBalanced.classList.replace('bg-blue-600', 'bg-slate-200');
+                btnBalanced.classList.replace('text-white', 'text-slate-700');
+            });
+            btnBalanced.addEventListener('click', () => {
+                updateBalanceChart('balanced');
+                btnBalanced.classList.replace('bg-slate-200', 'bg-blue-600');
+                btnBalanced.classList.replace('text-slate-700', 'text-white');
+                btnOriginal.classList.replace('bg-blue-600', 'bg-slate-200');
+                btnOriginal.classList.replace('text-white', 'text-slate-700');
+            });
+
+            const featureSelector = document.getElementById('featureSelector');
+            featureSelector.addEventListener('change', (e) => {
+                updateDistributionChart(e.target.value);
+            });
+            
+            const matrixContainer = document.getElementById('correlationMatrix');
+            const { labels, values } = data.correlations;
+            matrixContainer.innerHTML += `<div class="p-2"></div>` + labels.map(label => `<div class="p-2 text-center font-bold text-slate-700">${label}</div>`).join('');
+            values.forEach((row, i) => {
+                matrixContainer.innerHTML += `<div class="p-2 text-center font-bold text-slate-700">${labels[i]}</div>`;
+                row.forEach(val => {
+                    const absVal = Math.abs(val);
+                    let bgColor = 'bg-slate-400';
+                    if (absVal > 0.7) bgColor = 'bg-red-500';
+                    else if (absVal > 0.5) bgColor = 'bg-orange-400';
+                    else if (absVal > 0.2) bgColor = 'bg-blue-400';
+                    matrixContainer.innerHTML += `<div title="${val.toFixed(2)}" class="${bgColor} p-2 rounded-md flex items-center justify-center aspect-square">${val.toFixed(2)}</div>`;
+                });
+            });
+
+            updateDistributionChart('Hemoglobin');
+        });
+    </script>
+</body>
+</html>
